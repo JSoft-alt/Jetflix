@@ -47,11 +47,11 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes libarchive-tools rpm
 
-      - name: Keep private-repository updates disabled
+      - name: Configure public release updates
         shell: bash
         run: >-
           node -e "require('fs').writeFileSync('release-config.json',
-          JSON.stringify({ githubRepository: '' }, null, 2) + '\n')"
+          JSON.stringify({ githubRepository: process.env.GITHUB_REPOSITORY }, null, 2) + '\n')"
 
       - name: Build macOS installer
         if: runner.os == 'macOS'

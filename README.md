@@ -31,9 +31,9 @@ Artifacts are written to `dist/`. The native targets are:
 npm run release:all
 ```
 
-This requires GitHub CLI to be installed and authenticated, and `origin` must point to the private Jetflix repository. The **Build installers** workflow uploads each platform's installer as a private Actions artifact. Pushing a version tag such as `v1.0.0` also publishes the installers to a private repository release.
+This requires GitHub CLI to be installed and authenticated, and `origin` must point to the Jetflix repository. The **Build installers** workflow uploads each platform's installer as an Actions artifact. Pushing a version tag such as `v1.0.0` also publishes the installers to a public repository release.
 
-Automatic in-app update checks are intentionally disabled for private-repository builds because an installed desktop app cannot securely read private releases without user authentication. The private workflow still builds and stores installers. A separate authenticated or public release channel must be configured before enabling automatic updates.
+The workflow writes the public repository identifier into packaged builds so Jetflix can check its releases securely for updates. Local development builds leave updates unconfigured.
 
 ### Optional public-release signing
 
