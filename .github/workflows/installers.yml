@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes rpm
+        run: sudo apt-get update && sudo apt-get install --yes libarchive-tools rpm
 
       - name: Keep private-repository updates disabled
         shell: bash
