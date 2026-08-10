@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Jetflix cross-platform desktop streaming app",
   "author": {
-    "name": "Jetflix contributors"
+    "name": "Jetflix contributors",
+    "email": "support@jetflix.app"
   },
   "license": "GPL-3.0",
   "main": "index.js",
@@ -158,6 +159,7 @@
           ]
         }
       ],
+      "syncDesktopName": true,
       "category": "Utility",
       "icon": "public/sized",
       "desktop": {

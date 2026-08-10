@@ -55,20 +55,35 @@ jobs:
 
       - name: Build macOS installer
         if: runner.os == 'macOS'
-        run: ${{ matrix.command }}
+        shell: bash
+        run: |
+          if [[ -n "$MAC_CSC_LINK_INPUT" ]]; then
+            export CSC_LINK="$MAC_CSC_LINK_INPUT"
+            export CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD_INPUT"
+            export APPLE_ID="$APPLE_ID_INPUT"
+            export APPLE_APP_SPECIFIC_PASSWORD="$APPLE_APP_SPECIFIC_PASSWORD_INPUT"
+            export APPLE_TEAM_ID="$APPLE_TEAM_ID_INPUT"
+          fi
+          npm run dist:mac
         env:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MAC_CSC_LINK_INPUT: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD_INPUT: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID_INPUT: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD_INPUT: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID_INPUT: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build Windows installer
         if: runner.os == 'Windows'
-        run: ${{ matrix.command }}
+        shell: bash
+        run: |
+          if [[ -n "$WIN_CSC_LINK_INPUT" ]]; then
+            export CSC_LINK="$WIN_CSC_LINK_INPUT"
+            export CSC_KEY_PASSWORD="$WIN_CSC_KEY_PASSWORD_INPUT"
+          fi
+          npm run dist:win
         env:
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK_INPUT: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD_INPUT: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Build Linux installers
         if: runner.os == 'Linux'
