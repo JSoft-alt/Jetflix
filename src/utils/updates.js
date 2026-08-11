@@ -1,9 +1,9 @@
 // ── App Update Utilities ──────────────────────────────────────────────────────
 // Centralised update-check logic. Imported by both App.jsx and SettingsPage.jsx.
 //
-// The release repository is injected by the native GitHub Actions build.
-// Local builds leave it empty so a Jetflix build never installs upstream
-// binaries from an unrelated release channel over itself.
+// Jetflix is now public, so every official and local package uses the same
+// release channel. Keeping this in release-config.json also prevents locally
+// built installers from silently shipping with updates disabled.
 
 import releaseConfig from "../../release-config.json";
 

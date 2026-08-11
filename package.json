@@ -1,6 +1,6 @@
 {
   "name": "jetflix",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Jetflix cross-platform desktop streaming app",
   "desktopName": "Jetflix",
   "homepage": "https://jetflix.invalid",
@@ -14,6 +14,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "start": "vite build && electron .",
+    "test:update-channel": "node scripts/check-update-channel.mjs",
     "dist": "npm run dist:host",
     "dist:host": "cross-env ELECTRON_DIST=1 vite build && electron-builder --publish never",
     "dist:all": "cross-env ELECTRON_DIST=1 vite build && electron-builder --linux deb rpm AppImage pacman --win nsis --mac dmg --universal --publish never",

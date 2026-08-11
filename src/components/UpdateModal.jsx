@@ -488,8 +488,13 @@ export default function UpdateModal({
       });
       if (cancelRef.current) return;
       if (!result.ok) throw new Error(result.error || "Update failed");
-      setPhase("installing");
-      setProgressLabel("Launching installer…");
+      if (result.requiresManualInstall) {
+        setPhase("done");
+        setProgressLabel("");
+      } else {
+        setPhase("installing");
+        setProgressLabel("Launching installer…");
+      }
     } catch (e) {
       if (cancelRef.current) return;
       setPhase("error");
@@ -809,7 +814,8 @@ export default function UpdateModal({
           {/* Done */}
           {phase === "done" && (
             <div style={{ fontSize: 13, color: "#48c774", marginBottom: 12 }}>
-              ✓ Update downloaded, installer is running
+              ✓ macOS installer opened. Drag Jetflix to Applications, replace
+              the existing app, then reopen Jetflix.
             </div>
           )}
 

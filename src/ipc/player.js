@@ -549,10 +549,12 @@ function register(getMainWindow, { writeSecretMigration }) {
         app.exit(0);
       } else if (format === "dmg") {
         sendInstalling();
-        spawn("hdiutil", ["attach", destPath], {
-          detached: true,
-          stdio: "ignore",
-        }).unref();
+        // Launch Services mounts the DMG and reveals its installer window.
+        // A detached hdiutil process mounted it silently and made the update
+        // modal appear stuck on "Installing…" forever.
+        const openError = await shell.openPath(destPath);
+        if (openError) return { ok: false, error: openError };
+        return { ok: true, requiresManualInstall: true };
       }
 
       return { ok: true };

@@ -140,7 +140,9 @@ export default function App() {
 
   // ── Startup update check ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!storage.get("autoCheckUpdates")) return;
+    // Match Settings: unset means enabled; only an explicit false/0 disables it.
+    const autoCheckPreference = storage.get(STORAGE_KEYS.AUTO_CHECK_UPDATES);
+    if (autoCheckPreference === false || autoCheckPreference === 0) return;
     const source =
       storage.get(STORAGE_KEYS.UPDATE_SOURCE) || DEFAULT_UPDATE_SOURCE;
     checkForUpdatesWithFallback(source)
