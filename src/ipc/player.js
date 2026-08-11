@@ -643,6 +643,169 @@ function register(getMainWindow, { writeSecretMigration }) {
     (_, { url }) => new Promise((resolve) => fetchImageSecure(url, resolve)),
   );
 
+  // ── Unified playback controls across all webview frames ─────────────────────
+  // Providers frequently put the real video in a cross-origin iframe. Main
+  // process frame access gives every source the same Jetflix controls.
+  const getPlayerFrames = (webContentsId) => {
+    const { webContents } = require("electron");
+    if (!Number.isInteger(webContentsId)) return [];
+    const wc = webContents.fromId(webContentsId);
+    if (!wc || wc.isDestroyed() || !wc.mainFrame) return [];
+    const frames = [];
+    const collect = (frame) => {
+      frames.push(frame);
+      for (const child of frame.frames || []) collect(child);
+    };
+    collect(wc.mainFrame);
+    return frames;
+  };
+
+  const VIDEO_STATE_JS = `
+    (() => {
+      const videos = Array.from(document.querySelectorAll('video'));
+      const v = videos.sort((a, b) => {
+        const score = (x) => (Number.isFinite(x.duration) ? x.duration : 0) +
+          (x.readyState * 100000) + (!x.paused ? 1000000 : 0);
+        return score(b) - score(a);
+      })[0];
+      if (!v) return null;
+      const tracks = Array.from(v.textTracks || []).map((track, index) => ({
+        index,
+        label: track.label || track.language || ('Subtitle ' + (index + 1)),
+        language: track.language || '',
+        kind: track.kind || 'subtitles',
+        mode: track.mode || 'disabled',
+      }));
+      return {
+        paused: v.paused,
+        currentTime: Number.isFinite(v.currentTime) ? v.currentTime : 0,
+        duration: Number.isFinite(v.duration) ? v.duration : 0,
+        volume: Number.isFinite(v.volume) ? v.volume : 1,
+        muted: !!v.muted,
+        playbackRate: Number.isFinite(v.playbackRate) ? v.playbackRate : 1,
+        readyState: v.readyState,
+        subtitles: tracks,
+        activeSubtitle: tracks.find((track) => track.mode === 'showing')?.index ?? -1,
+      };
+    })()
+  `;
+
+  const findActiveVideo = async (webContentsId) => {
+    const candidates = [];
+    for (const frame of getPlayerFrames(webContentsId)) {
+      try {
+        const state = await frame.executeJavaScript(VIDEO_STATE_JS);
+        if (state) candidates.push({ frame, state });
+      } catch {}
+    }
+    candidates.sort((a, b) => {
+      const score = (candidate) => (candidate.state.duration || 0) +
+        (candidate.state.readyState || 0) * 100000 +
+        (!candidate.state.paused ? 1000000 : 0);
+      return score(b) - score(a);
+    });
+    return candidates[0] || null;
+  };
+
+  ipcMain.handle("get-unified-player-state", async (_, webContentsId) => {
+    try {
+      const active = await findActiveVideo(webContentsId);
+      return active ? { ready: true, ...active.state } : { ready: false };
+    } catch {
+      return { ready: false };
+    }
+  });
+
+  ipcMain.handle("control-unified-player", async (_, webContentsId, rawCommand) => {
+    try {
+      if (!rawCommand || typeof rawCommand.action !== "string") return false;
+      const allowedActions = new Set([
+        "toggle-play", "seek-relative", "seek-to", "set-volume",
+        "toggle-mute", "set-rate", "set-subtitle", "load-external-subtitle",
+      ]);
+      if (!allowedActions.has(rawCommand.action)) return false;
+
+      const command = { action: rawCommand.action };
+      if (command.action === "seek-relative") {
+        command.seconds = Math.max(-60, Math.min(60, Number(rawCommand.seconds) || 0));
+      } else if (command.action === "seek-to") {
+        command.seconds = Math.max(0, Number(rawCommand.seconds) || 0);
+      } else if (command.action === "set-volume") {
+        command.volume = Math.max(0, Math.min(1, Number(rawCommand.volume) || 0));
+      } else if (command.action === "set-rate") {
+        const rates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+        const rate = Number(rawCommand.rate);
+        if (!rates.includes(rate)) return false;
+        command.rate = rate;
+      } else if (command.action === "set-subtitle") {
+        command.index = Number.isInteger(rawCommand.index) ? rawCommand.index : -1;
+      } else if (command.action === "load-external-subtitle") {
+        let parsed;
+        try {
+          parsed = new URL(rawCommand.url);
+        } catch {
+          return false;
+        }
+        if (!["https:", "http:"].includes(parsed.protocol)) return false;
+        command.url = parsed.toString();
+        command.label = String(rawCommand.label || "Subtitle").slice(0, 80);
+        command.language = String(rawCommand.language || "").slice(0, 20);
+      }
+
+      const active = await findActiveVideo(webContentsId);
+      if (!active) return false;
+      const serialized = JSON.stringify(command).replace(/</g, "\\u003c");
+      return await active.frame.executeJavaScript(`
+        (async () => {
+          const command = ${serialized};
+          const videos = Array.from(document.querySelectorAll('video'));
+          const v = videos.sort((a, b) => {
+            const score = (x) => (Number.isFinite(x.duration) ? x.duration : 0) +
+              (x.readyState * 100000) + (!x.paused ? 1000000 : 0);
+            return score(b) - score(a);
+          })[0];
+          if (!v) return false;
+          if (command.action === 'toggle-play') {
+            if (v.paused) await v.play(); else v.pause();
+          } else if (command.action === 'seek-relative') {
+            v.currentTime = Math.max(0, Math.min(v.duration || Infinity, v.currentTime + command.seconds));
+          } else if (command.action === 'seek-to') {
+            v.currentTime = Math.max(0, Math.min(v.duration || Infinity, command.seconds));
+          } else if (command.action === 'set-volume') {
+            v.volume = command.volume;
+            if (command.volume > 0) v.muted = false;
+          } else if (command.action === 'toggle-mute') {
+            v.muted = !v.muted;
+          } else if (command.action === 'set-rate') {
+            v.playbackRate = command.rate;
+          } else if (command.action === 'set-subtitle') {
+            Array.from(v.textTracks || []).forEach((track, index) => {
+              track.mode = index === command.index ? 'showing' : 'disabled';
+            });
+          } else if (command.action === 'load-external-subtitle') {
+            Array.from(v.textTracks || []).forEach((track) => { track.mode = 'disabled'; });
+            let trackEl = Array.from(v.querySelectorAll('track[data-jetflix-subtitle]'))
+              .find((track) => track.src === command.url);
+            if (!trackEl) {
+              trackEl = document.createElement('track');
+              trackEl.kind = 'subtitles';
+              trackEl.label = command.label;
+              trackEl.srclang = command.language;
+              trackEl.src = command.url;
+              trackEl.dataset.jetflixSubtitle = '1';
+              v.appendChild(trackEl);
+            }
+            trackEl.default = true;
+            trackEl.track.mode = 'showing';
+          }
+          return true;
+        })()
+      `);
+    } catch {
+      return false;
+    }
+  });
+
   // ── Query video progress across all webview frames ────────────────────────
   // executeJavaScript on a webview only reaches the top frame.
   // VidSrc / 2embed nest the player inside cross-origin iframes, iterate

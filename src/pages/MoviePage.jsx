@@ -42,6 +42,7 @@ import {
 import DownloadModal from "../components/DownloadModal";
 import TrailerModal from "../components/TrailerModal";
 import BlockedStatsModal from "../components/BlockedStatsModal";
+import UnifiedPlayerControls from "../components/UnifiedPlayerControls";
 import { useBlockedStats } from "../utils/useBlockedStats";
 import MediaCard from "../components/MediaCard";
 import {
@@ -986,6 +987,21 @@ export default function MoviePage({
                   (sourceIsAsync(playerSource) && !resolvedPlayerUrl)
                     ? "hidden"
                     : "visible",
+              }}
+            />
+            <UnifiedPlayerControls
+              webviewRef={webviewRef}
+              active={!pipOpen && !webviewLoading}
+              sourceKey={`${playerSource}:movie:${item.id}`}
+              externalSubtitles={interceptedSubs}
+              onFullscreen={() => {
+                const next = !playerFullscreen;
+                setPlayerFullscreen(next);
+                if (next) {
+                  document.documentElement.setAttribute("data-player-fullscreen", "1");
+                } else {
+                  document.documentElement.removeAttribute("data-player-fullscreen");
+                }
               }}
             />
             {/* Left-side overlay button group, flex row, no fixed px offsets */}

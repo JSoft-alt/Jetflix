@@ -108,6 +108,10 @@ contextBridge.exposeInMainWorld("electron", {
   clearAppCache: () => ipcRenderer.invoke("clear-app-cache"),
   queryVideoProgress: (webContentsId) =>
     ipcRenderer.invoke("query-video-progress", webContentsId),
+  getUnifiedPlayerState: (webContentsId) =>
+    ipcRenderer.invoke("get-unified-player-state", webContentsId),
+  controlUnifiedPlayer: (webContentsId, command) =>
+    ipcRenderer.invoke("control-unified-player", webContentsId, command),
   clearWatchData: () => ipcRenderer.invoke("clear-watch-data"),
   deleteAllDownloads: () => ipcRenderer.invoke("delete-all-downloads"),
   resetApp: () => ipcRenderer.invoke("reset-app"),

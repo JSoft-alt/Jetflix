@@ -49,6 +49,7 @@ import {
 import DownloadModal from "../components/DownloadModal";
 import TrailerModal from "../components/TrailerModal";
 import BlockedStatsModal from "../components/BlockedStatsModal";
+import UnifiedPlayerControls from "../components/UnifiedPlayerControls";
 import { useBlockedStats } from "../utils/useBlockedStats";
 import {
   storage,
@@ -2027,6 +2028,21 @@ export default function TVPage({
                         : "visible",
                   }}
                   tabIndex={-1}
+                />
+                <UnifiedPlayerControls
+                  webviewRef={webviewRef}
+                  active={!pipOpen && !webviewLoading && autoplayCountdown === null}
+                  sourceKey={`${playerSource}:tv:${item.id}:${playerEp.season}:${playerEp.episode}`}
+                  externalSubtitles={interceptedSubs}
+                  onFullscreen={() => {
+                    const next = !playerFullscreen;
+                    setPlayerFullscreen(next);
+                    if (next) {
+                      document.documentElement.setAttribute("data-player-fullscreen", "1");
+                    } else {
+                      document.documentElement.removeAttribute("data-player-fullscreen");
+                    }
+                  }}
                 />
                 {/* Left-side overlay button group, flex row, no fixed px offsets */}
                 <div className="player-overlay-group">
