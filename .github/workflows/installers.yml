@@ -85,6 +85,11 @@ jobs:
           WIN_CSC_LINK_INPUT: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD_INPUT: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
+      - name: Smoke test Windows installer and app launch
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/windows-smoke.ps1
+
       - name: Build Linux installers
         if: runner.os == 'Linux'
         run: ${{ matrix.command }}
